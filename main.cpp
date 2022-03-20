@@ -379,7 +379,7 @@ void player::CheckMonopoly(struct location *Board, int Prop) { // CHECKS IF PLAY
         }
         else { // SET MONOPOLY TO FALSE - THIS IS NEEDED IF A PLAYER SELLS A PROPERTY FROM A SET THEY HAVE A MONOPOLY IN
             for (int i = Prop - 4; i < Prop + 4; i++) {
-                if (Board[i].Color == Board[Prop].Color && Board[i].OwnerID == Board[Prop].OwnerID) { // IF COLOR IS THE SAME AS PROP AND OWNER IS THE SAME AS PROP
+                if (Board[i].Color == Board[Prop].Color) {
                     Board[i].isMonopoly = false;
                 }
             }

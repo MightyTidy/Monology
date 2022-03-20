@@ -613,31 +613,31 @@ void player::BuySellHouseHotel(player *PlayerArray, struct location *Board, int 
                 cout << "Press '1' to sell one\nPress '3' to sell set";
                 int OneSet;
                 cin >> OneSet;
-                    if (OneSet == 1) {
+                if (OneSet == 1) {
+                    PlayerArray[Player].Bal = PlayerArray[Player].Bal + Board[Prop].HouseP / 2;
+                    if (Board[Prop].Hotel) { // IF SELLING HOTEL
+                        Board[Prop].numHouse = 4;
+                        Board[Prop].Hotel = false;
+                    }
+                    else if (Board[Prop].numHouse > 0) { // ELSE SELL A HOUSE
+                        Board[Prop].numHouse--;
+                    }
+                }
+                else if (OneSet == 3) {
+                    for (int i = 0; i < 40; i++) {
                         PlayerArray[Player].Bal = PlayerArray[Player].Bal + Board[Prop].HouseP / 2;
                         if (Board[Prop].Hotel) { // IF SELLING HOTEL
                             Board[Prop].numHouse = 4;
                             Board[Prop].Hotel = false;
                         }
-                        else if (Board[Prop].numHouse > 0) { // ELSE SELL A HOUSE
+                        else if (Board[Prop].numHouse > 0) {
                             Board[Prop].numHouse--;
-                        }
-                    }
-                    else if (OneSet == 3) {
-                        for (int i = 0; i < 40; i++) {
-                            PlayerArray[Player].Bal = PlayerArray[Player].Bal + Board[Prop].HouseP / 2;
-                            if (Board[Prop].Hotel) { // IF SELLING HOTEL
-                                Board[Prop].numHouse = 4;
-                                Board[Prop].Hotel = false;
-                            }
-                            else if (Board[Prop].numHouse > 0) {
-                                Board[Prop].numHouse--;
-                            }
                         }
                     }
                 }
             }
         }
+    }
     else {
         cout << "You can't buy houses/hotels on this property\n";
     }
@@ -914,29 +914,29 @@ void player::Chance(player *PlayerArray, struct location *Board, int Player, boo
         }
         else  if (PlayerArray[Player].location == 36){
             cout << "Advance to nearest railroad\nIf owned pay double rent\n";
-                PlayerArray[Player].location = 5;
-                //PlayerArray[Player].Bal += 200; NOT SURE IF PLAYER COLLECTS 200 FOR THIS - NOT SPECIFIED ON THE CARD
-                if (Board[5].Owned){
-                    PlayerArray[Player].PayRent(PlayerArray, Board, Player);
-                    PlayerArray[Player].PayRent(PlayerArray, Board, Player);
-                }
-                else {
-                    int BuyOrNo;
-                    cout << "\nYou moved to " << Board[PlayerArray[Player].location].Name << "\nPress '1' to buy, '8' for property info, or '0' to skip: \n";
-                    cout << "Current balance: $" << PlayerArray[Player].Bal << "\n";
-                    cout << "Cost: $" << Board[PlayerArray[Player].location].Price << "\n";
+            PlayerArray[Player].location = 5;
+            //PlayerArray[Player].Bal += 200; NOT SURE IF PLAYER COLLECTS 200 FOR THIS - NOT SPECIFIED ON THE CARD
+            if (Board[5].Owned){
+                PlayerArray[Player].PayRent(PlayerArray, Board, Player);
+                PlayerArray[Player].PayRent(PlayerArray, Board, Player);
+            }
+            else {
+                int BuyOrNo;
+                cout << "\nYou moved to " << Board[PlayerArray[Player].location].Name << "\nPress '1' to buy, '8' for property info, or '0' to skip: \n";
+                cout << "Current balance: $" << PlayerArray[Player].Bal << "\n";
+                cout << "Cost: $" << Board[PlayerArray[Player].location].Price << "\n";
+                cin >> BuyOrNo;
+                while (BuyOrNo == 8){
+                    PlayerArray[Player].UtilRRDetails(Board, PlayerArray[Player].location);
+                    cout << "Press '1' to buy, '8' for property info, or '0' to skip: \n";
                     cin >> BuyOrNo;
-                    while (BuyOrNo == 8){
-                        PlayerArray[Player].UtilRRDetails(Board, PlayerArray[Player].location);
-                        cout << "Press '1' to buy, '8' for property info, or '0' to skip: \n";
-                        cin >> BuyOrNo;
-                    }
-                    if (BuyOrNo == 1){ // IF BUYING
-                        PlayerArray[Player].BuyProperty(PlayerArray, Board, Player);
-                    }
+                }
+                if (BuyOrNo == 1){ // IF BUYING
+                    PlayerArray[Player].BuyProperty(PlayerArray, Board, Player);
                 }
             }
         }
+    }
     if (ChanceRoll == 14){ // PAY EACH PLAYER 50 DOLLARS
         for (int i = 0; i < 4; i++){
             if (!PlayerArray[i].Bankrupt){
@@ -1771,7 +1771,7 @@ int main() {
     HannosHouse.Color = "DarkBlue";
     Board[39] = HannosHouse;
 
-     //----------------------------------------------------------------------------------------------------------------------------------
+    //----------------------------------------------------------------------------------------------------------------------------------
     //-----------------------------------------------------------------------------------------------------------------------------------
     //NOW CREATING PLAYERS
 
@@ -1905,8 +1905,43 @@ int main() {
             if (NextAction == 0) {
                 while (NextAction != 1) {
                     cout
-                            << "------------Accounts------------\nPress '1' for next turn\nPress '2' to look at your properties\nPress '3' to trade\nPress '4' to update Properties\n";
+                            << "------------Accounts------------\nPress '1' for next turn\nPress '2' to look at your properties\nPress '3' to trade\nPress '4' to update Properties\nPress '-5' to enter dev mode";
                     cin >> NextAction;
+                    while(NextAction ==-5){
+                        cout << "Entering Dev Mode\n";
+                        cout <<"What do you want to do with dev mode?\n Enter 1 to Add a property,\n 2 to Change a player balance,\n 3 to add houses / hotels to property,\n 4 to teleport current player to location\n ";
+                        int Devin=0;
+                        cin >> Devin;
+                        if(Devin==1){
+                            cout << "What property do you want to add to current player? (give name)";
+                            string PropUpdate2;
+                            cin >> PropUpdate2;
+                            bool GotProp2 = false;
+                            int WhichProp2;
+                            while (!GotProp2) { // WHILE LOOP TO VERIFY INPUT
+                                for (int i = 0; i < 40; i++) {
+                                    if (Board[i].Name == PropUpdate2) {
+                                        WhichProp2 = i;
+                                        GotProp2 = true;
+                                        Board[i].OwnerID=PlayerTurn;
+                                        Board[i].Owned=true;
+                                        PLayerArray[PlayerTurn].CheckMonopoly(Board, i);
+                                    }
+                                }
+                                if (PropUpdate2 == "1") {
+                                    GotProp2 = true;
+                                }
+                                if (!GotProp2) { // CHECK IF PROPERTY ENTERED IS OWNED BY PLAYER
+                                    cout << "giving property to current player \n";
+
+                                    cin >> PropUpdate2;
+                                }
+                            }
+                            cout << "------------Accounts------------\nPress '1' for next turn\nPress '2' to look at your properties\nPress '3' to trade\nPress '4' to update Properties\nPress '-5' to enter dev mode";
+                            cin >> NextAction;
+
+                        }
+                    }
                     if (NextAction == 2) {
                         PLayerArray[PlayerTurn].MyProperties(PLayerArray, Board, PlayerTurn);
                     }
@@ -1932,9 +1967,5 @@ int main() {
             PlayerTurn++;
         }
     }
-
-
     return 0;
 }
-
-

@@ -344,7 +344,7 @@ void player::PassedGO(player *PlayerArray, struct location *Board, int Player) {
 
 void player::CheckMonopoly(struct location *Board, int Prop) { // CHECKS IF PLAYER HAS MONOPOLY AFTER PLAYER GETS A PROPERTY
     int NumOwned = 0; // COUNTING THE NUMBER OF SAME-COLOR PROPERTIES AS PARAMETER 'PROP'
-    for (int i = Prop - 3; i < Prop + 3; i++){
+    for (int i = Prop - 4; i < Prop + 4; i++){
         if (Board[i].Color == Board[Prop].Color && Board[i].OwnerID == Board[Prop].OwnerID){ // IF COLOR IS THE SAME AS PROP AND OWNER IS THE SAME AS PROP
             NumOwned++;
         }
@@ -352,7 +352,7 @@ void player::CheckMonopoly(struct location *Board, int Prop) { // CHECKS IF PLAY
     if (Board[Prop].Color == "Purple" || Board[Prop].Color == "DarkBlue") { // DIFFERENT CODE FOR THESE PROPERTIES - ONLY 2 OF A KIND
         if (NumOwned == 2){ // IF PLAYER OWNS BOTH PROPERTIES
             cout << "You now have a monopoly!\n";
-            for (int i = Prop - 3; i < Prop + 3; i++){
+            for (int i = Prop - 4; i < Prop + 4; i++){
                 if (Board[i].Color == Board[Prop].Color && Board[i].OwnerID == Board[Prop].OwnerID){ // IF COLOR IS THE SAME AS PROP AND OWNER IS THE SAME AS PROP
                     cout << Board[i].Name << "\n";
                     Board[i].isMonopoly = true;
@@ -360,7 +360,7 @@ void player::CheckMonopoly(struct location *Board, int Prop) { // CHECKS IF PLAY
             }
         }
         else { // SET MONOPOLY TO FALSE - THIS IS NEEDED IF A PLAYER SELLS A PROPERTY FROM A SET THEY HAVE A MONOPOLY IN
-            for (int i = Prop - 3; i < Prop + 3; i++) {
+            for (int i = Prop - 4; i < Prop + 4; i++) {
                 if (Board[i].Color == Board[Prop].Color && Board[i].OwnerID == Board[Prop].OwnerID) { // IF COLOR IS THE SAME AS PROP AND OWNER IS THE SAME AS PROP
                     Board[i].isMonopoly = false;
                 }
@@ -370,7 +370,7 @@ void player::CheckMonopoly(struct location *Board, int Prop) { // CHECKS IF PLAY
     else{
         if (NumOwned == 3){ // IF PLAYER OWNS ALL THREE
             cout << "You now have a monopoly!\n";
-            for (int i = Prop - 3; i < Prop + 3; i++){
+            for (int i = Prop - 4; i < Prop + 4; i++){
                 if (Board[i].Color == Board[Prop].Color && Board[i].OwnerID == Board[Prop].OwnerID){ // IF COLOR IS THE SAME AS PROP AND OWNER IS THE SAME AS PROP
                     cout << Board[i].Name << "\n";
                     Board[i].isMonopoly = true;
@@ -378,7 +378,7 @@ void player::CheckMonopoly(struct location *Board, int Prop) { // CHECKS IF PLAY
             }
         }
         else { // SET MONOPOLY TO FALSE - THIS IS NEEDED IF A PLAYER SELLS A PROPERTY FROM A SET THEY HAVE A MONOPOLY IN
-            for (int i = Prop - 3; i < Prop + 3; i++) {
+            for (int i = Prop - 4; i < Prop + 4; i++) {
                 if (Board[i].Color == Board[Prop].Color && Board[i].OwnerID == Board[Prop].OwnerID) { // IF COLOR IS THE SAME AS PROP AND OWNER IS THE SAME AS PROP
                     Board[i].isMonopoly = false;
                 }

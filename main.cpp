@@ -41,7 +41,7 @@ public:
     int Bal = 1500;
     int location = 0;
     int DiceRoll = 0;
-    bool TiedRoll = false; // bool to help determine first turn - if two players have the same dice roll before game this will be set to true
+    bool TiedRoll = true; // bool to help determine first turn - if two players have the same dice roll before game this will be set to true
     string PlayerName;
     bool InJail = false; // bool to see if player is in jail
     int JailTurns = 0; // number of turns in jail
@@ -1850,63 +1850,42 @@ int main() {
     srand(time(0));
 
     // CHOOSE WHO GETS TO GO FIRST BY ROLLING DICE
-    // 2 dice rolls
-
-    //------------------------------------------------------------------------------------------------------------------
-    //NEED TO FIX TIE SCENARIO, CRASHED WHEN 3 OR 4 PLAYERS TIED
-    // AND DOESNT WORK WHEN 2 PLAYERS TIE
-    //------------------------------------------------------------------------------------------------------------------
-    int PlayerTurn = 1; // start on player 1's turn - all players roll dice and the highest roll starts the game
-    for (int i = 0; i < 4; i++) {
-        PLayerArray[i].RollDice(PLayerArray, Board, i, true);
-    }
-    int HighRoll = 0; // check which player got highest roll
-    for (int i = 0; i < 4; i++) {
-        if (PLayerArray[i].DiceRoll > HighRoll) { // if higher, new highest roll
-            HighRoll = PLayerArray[i].DiceRoll;
-            PlayerTurn = i;
-            for (int j = 0; j < 4; j++) {
-                PLayerArray[j].TiedRoll = false;
-            }
-        }
-        else if (PLayerArray[i].DiceRoll == HighRoll) { // if equal, we roll again with the players that tied
-            PLayerArray[i].TiedRoll = true;
-        }
-        else if (PLayerArray[i].DiceRoll < HighRoll) { // if lower, set tiedroll to false. if 1 or less players have tiedroll = true, we can exit the loop
-            PLayerArray[i].TiedRoll = false;
-        }
-    }
-    int LeftToRoll = 0;
-    for (int i = 0; i < 4; i++) {
-        if (PLayerArray[i].TiedRoll) {
-            LeftToRoll++;
-        }
-    }
-    while (LeftToRoll > 1) {
-        for (int i = 0; i < 4; i++) {
+    int PlayerTurn = 0; // start on player 1's turn - all players roll dice and the highest roll starts the game
+    int numTied = 4; // start with all 4 players 'tied' just so they all have to roll
+    int HighRoll = 0; // variable to store player rolls and find the highest
+    while (numTied > 1){
+        numTied = 1;
+        HighRoll = 0;
+        for (int i = 0; i < 4; i++){
             if (PLayerArray[i].TiedRoll) {
                 PLayerArray[i].RollDice(PLayerArray, Board, i, true);
-                if (PLayerArray[i].DiceRoll > HighRoll) { // if higher, new highest roll
-                    HighRoll = PLayerArray[i].DiceRoll;
-                    PlayerTurn = i;
-                }
-                else if (PLayerArray[i].DiceRoll == HighRoll) { // if equal, we roll again with the players that tied
-                    PLayerArray[i].TiedRoll = true;
-                }
-                else if (PLayerArray[i].DiceRoll < HighRoll) { // if lower, set tiedroll to false. if 1 or less players have tiedroll = true, we can exit the loop
-                    PLayerArray[i].TiedRoll = false;
+            }
+            else {
+                PLayerArray[i].DiceRoll = 0;
+            }
+        }
+        for (int i = 0; i < 4; i++){
+            if (PLayerArray[i].DiceRoll > HighRoll){
+                HighRoll = PLayerArray[i].DiceRoll;
+                numTied = 1;
+                for (int j = 0; j < 4; j++){
+                    if (PLayerArray[j].DiceRoll < HighRoll){
+                        PLayerArray[j].TiedRoll = false;
+                    }
                 }
             }
-            LeftToRoll = 0;
-            for (int j = 0; j < 4; j++) {
-                if (PLayerArray[j].TiedRoll) {
-                    LeftToRoll++;
-                }
+            else if (PLayerArray[i].DiceRoll == HighRoll){
+                numTied++;
+                PLayerArray[i].TiedRoll = true;
             }
         }
     }
+    for (int i = 0; i < 4; i++){
+        if (PLayerArray[i].DiceRoll == HighRoll){
+            PlayerTurn = i;
+        }
+    }
 
-    cout << PLayerArray[PlayerTurn].DiceRoll << "\n";
     cout << PLayerArray[PlayerTurn].PlayerName << " starts the game!\n";
     // -----------------------------------------------------------------------------------------------------------------
     // GAME BEGINS

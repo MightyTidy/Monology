@@ -88,7 +88,7 @@ player::player() {
 location::location() {
 
 }
-// ROLLING NON DOUBLES IN JAIL LETS PLAYERS JUST LEAVE - NEEDS FIX
+
 void player::RollDice(player PlayerArray[], struct location *Board, int Player, bool FirstRoll) {
     string inplace; // JUST A TEMP STRING TO ALLOW FOR CIN TO ADD ACTION TO DICE ROLL
     int min = 1;
@@ -130,7 +130,7 @@ void player::RollDice(player PlayerArray[], struct location *Board, int Player, 
 }
 
 void player::MovePlayer(player *PlayerArray, struct location *Board, int Player, bool Doubles, bool FirstRoll) { // MOVE PLAYER TO NEW LOCATION
-    if (PlayerArray[Player].DoublesCount == 3) {
+    if (PlayerArray[Player].DoublesCount == 3 && !PlayerArray[Player].Bankrupt) {
         cout << "3 doubles in a row!\nGO TO JAIL\n";
         PlayerArray[Player].InJail = true;
         PlayerArray[Player].location = 10;
@@ -216,7 +216,7 @@ void player::MovePlayer(player *PlayerArray, struct location *Board, int Player,
             PlayerArray[Player].DoublesCount = 0;
         }
         if (!FirstRoll) {
-            if (Doubles) {
+            if (Doubles && !PlayerArray[Player].Bankrupt) {
                 cout << "Rolled doubles! \n";
                 PlayerArray[Player].RollDice(PlayerArray, Board, Player, false);
             }
@@ -500,7 +500,6 @@ void player::MyProperties(player *PlayerArray, struct location *Board, int Playe
         }
     }
 }
-// HOUSE BUY/SELL FUNCTIONALITY NOT YET TESTED
 // ADD PROPDETAILS FUNCTION CALL SOMEWHERE
 void player::UpdateProp(player *PlayerArray, struct location *Board, int Player) {
     PlayerArray[Player].MyProperties(PlayerArray, Board, Player);
@@ -571,7 +570,8 @@ void player::BuySellHouseHotel(player *PlayerArray, struct location *Board, int 
             if (!Board[Prop].isMortgaged) {
                 if (PlayerArray[Player].Bal <= Board[Prop].HouseP) {
                     cout << "You don't have the funds to buy house/hotel here\n";
-                } else {
+                }
+                else {
                     cout << "Press '1' to buy one\nPress '3' to buy set";
                     int OneSet;
                     cin >> OneSet;
@@ -579,18 +579,23 @@ void player::BuySellHouseHotel(player *PlayerArray, struct location *Board, int 
                         PlayerArray[Player].Bal = PlayerArray[Player].Bal - Board[Prop].HouseP;
                         if (Board[Prop].numHouse == 4) {
                             Board[Prop].Hotel = true;
-                        } else {
+                        }
+                        else {
                             Board[Prop].numHouse++;
                         }
-                    } else if (OneSet == 3) {
+                    }
+                    else if (OneSet == 3) {
                         if (PlayerArray[Player].Bal <= Board[Prop].HouseP * 3) {
                             cout << "You don't have the funds to buy a set here\n";
-                        } else {
+                        }
+                        else {
                             for (int i = 0; i < 40; i++) {
                                 if (Board[i].Color == Board[Prop].Color) {
+                                    PlayerArray[Player].Bal -= Board[Prop].HouseP;
                                     if (Board[i].numHouse == 4) {
                                         Board[i].Hotel = true;
-                                    } else if (!Board[i].Hotel) {
+                                    }
+                                    else if (!Board[i].Hotel) {
                                         Board[i].numHouse++;
                                     }
                                 }
@@ -684,10 +689,10 @@ void player::UtilRRDetails(struct location *Board, int Prop) {
     cout << "\nProperty Price: $" << Board[Prop].Price;
     if (Board[Prop].isRailroad){
         cout << "\n\nRent:";
-        cout << "\n1 Railroad owned: $" << Board[Prop].Rent;
-        cout << "\n2 Railroads owned: $" << Board[Prop].Rent1H;
-        cout << "\n3 Railroads owned: $" << Board[Prop].Rent2H;
-        cout << "\nRailroad monopoly: $" << Board[Prop].Rent3H;
+        cout << "\n1 Railroad owned: $" << Board[Prop].Rent1H;
+        cout << "\n2 Railroads owned: $" << Board[Prop].Rent2H;
+        cout << "\n3 Railroads owned: $" << Board[Prop].Rent3H;
+        cout << "\nRailroad monopoly: $" << Board[Prop].Rent4H;
     }
     else {
         cout << "\nRent:\n4x dice roll if not monopoly\n10x dice roll if monopoly";
@@ -955,6 +960,7 @@ void player::Chance(player *PlayerArray, struct location *Board, int Player, boo
             }
         }
     if (ChanceRoll == 14){ // PAY EACH PLAYER 50 DOLLARS
+        cout << "Pay each player $50\n";
         for (int i = 0; i < 4; i++){
             if (!PlayerArray[i].Bankrupt){
                 PlayerArray[Player].Bal -= 50;
@@ -1184,6 +1190,7 @@ bool player::CheckBankrupt(player *PlayerArray, struct location *Board, int Play
             if (Choice == 1){ // IF PLAYER GOES BANKRUPT
                 cout << PlayerArray[Player].Name << ", you've gone bankrupt!\n";
                 PlayerArray[Payee].Bal += PlayerArray[Player].Bal; // TRANSFER BANKRUPT PLAYERS BALANCE TO PAYEE
+                PlayerArray[Player].Bal = 0;
                 for (int i = 0; i < 40; i++){
                     if (Board[i].OwnerID == PlayerArray[Player].PID){ // TRANSFER BANKRUPT PLAYERS PROPERTIES
                         Board[i].OwnerID = PlayerArray[Payee].PID;
@@ -1202,7 +1209,7 @@ bool player::CheckBankrupt(player *PlayerArray, struct location *Board, int Play
             else if (Choice == 3){
                 PlayerArray[Player].UpdateProp(PlayerArray, Board, Player);
             }
-            cout << "Press '1' to go bankrupt\nPress '2' to trade\nPress '3' to mortgage or sell houses/hotels\nPress 4 to pay";
+            cout << "Press '1' to go bankrupt\nPress '2' to trade\nPress '3' to mortgage or sell houses/hotels\nPress 4 to pay\n";
             cin >> Choice;
             if (PlayerArray[Player].Bal <= Amt){
                 cout << "You can't afford this payment!\nPress '1' to go bankrupt\nPress '2' to trade\nPress '3' to mortgage or sell houses/hotels\n";
@@ -1228,7 +1235,7 @@ void player::Trade(player *PlayerArray, struct location *Board, int Player) {
     int TradeWith; // WHO PLAYER WANTS TO TRADE WITH
     cout << "Enter player to trade with\n";
     for (int i = 0; i < 4; i++){
-        if (i != Player){
+        if (i != Player && !PlayerArray[i].Bankrupt){
             cout << "Press " << i << " for " << PlayerArray[i].PlayerName << "\n";
         }
     }
@@ -1285,6 +1292,7 @@ void player::Trade(player *PlayerArray, struct location *Board, int Player) {
                         }
                     }
                 }
+                Choice = 0;
             }
         }
         if (Choice == 2){
@@ -1790,8 +1798,7 @@ int main() {
     HannosHouse.Color = "DarkBlue";
     Board[39] = HannosHouse;
 
-     //----------------------------------------------------------------------------------------------------------------------------------
-    //-----------------------------------------------------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------------------------------------
     //NOW CREATING PLAYERS
 
     player PLayerArray[5];

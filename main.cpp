@@ -30,7 +30,7 @@ public:
     int numHouse = 0;
     bool Hotel = false;
     bool isMortgaged = false;
-    bool isTax = false;
+    bool inTrade = false;
 
 };
 
@@ -123,101 +123,100 @@ void player::RollDice(player PlayerArray[], struct location *Board, int Player, 
 
             }
         }
-        if (!GotDubs && !PlayerArray[Player].InJail) { // DOUBLES WILL HAVE US CALL MOVE FUNCTION ONE TOO MNY TIMES, CHECK FOR THAT
+        if (!GotDubs && !PlayerArray[Player].InJail) {
             PlayerArray[Player].MovePlayer(PlayerArray, Board, Player, false, FirstRoll);// move places on the board
         }
     }
 }
 
 void player::MovePlayer(player *PlayerArray, struct location *Board, int Player, bool Doubles, bool FirstRoll) { // MOVE PLAYER TO NEW LOCATION
-    if (PlayerArray[Player].location + PlayerArray[Player].DiceRoll < 40) {
-        PlayerArray[Player].location = PlayerArray[Player].location + PlayerArray[Player].DiceRoll;
-    }
-    else {
-        PlayerArray[Player].PassedGO(PlayerArray, Board, Player); // PLAYER GETS 200 FOR PASSING GO
-        PlayerArray[Player].location = PlayerArray[Player].location + PlayerArray[Player].DiceRoll - 40;
-    }
-    cout << PlayerArray[Player].PlayerName << " moved to " << Board[PlayerArray[Player].location].Name << "\n"; // CHECK IF LOCATION IS PROPERTY
-    if (PlayerArray[Player].location == 10 && !PlayerArray[Player].InJail){
-        cout << "Just visiting!\n";
-    }
-    if (Board[PlayerArray[Player].location].isProperty) { // CHECK IF LOCATION IS OWNED BY ANOTHER PLAYER
-        if (Board[PlayerArray[Player].location].Owned && Board[PlayerArray[Player].location].OwnerID != 4) { // IF PROPERTY IS OWNED
-            if (Board[PlayerArray[Player].location].OwnerID == PlayerArray[Player].PID) { // IF PLAYER IS ON THEIR OWN PROPERTY
-                cout << "\nThis property is yours\n";
-            }
-            else {
-                if (Board[PlayerArray[Player].location].isUtility){
-                    PlayerArray[Player].PayRentUtility(PlayerArray, Board, Player);
-                }
-                else{
-                    PlayerArray[Player].PayRent(PlayerArray, Board, Player);
-                }
-            }
-        }
-        else { // IF PROPERTY IS UNOWNED
-            int BuyOrNo;
-            cout << "\nYou landed on " << Board[PlayerArray[Player].location].Name << "\nPress '1' to buy, '8' for property info, or '0' to skip: \n";
-            cout << "Current balance: $" << PlayerArray[Player].Bal << "\n";
-            cout << "Cost: $" << Board[PlayerArray[Player].location].Price << "\n";
-            cin >> BuyOrNo;
-
-            while (BuyOrNo == 8){
-                if (Board[PlayerArray[Player].location].isRailroad || Board[PlayerArray[Player].location].isUtility){
-                    PlayerArray[Player].UtilRRDetails(Board, PlayerArray[Player].location);
-                }
-                else {
-                    PlayerArray[Player].PropDetails(Board, PlayerArray[Player].location);
-                }
-                cout << "Press '1' to buy, '8' for property info, or '0' to skip: \n";
-                cin >> BuyOrNo;
-            }
-            if (BuyOrNo == 1){ // IF BUYING
-                if (PlayerArray[Player].Bal < Board[PlayerArray[Player].location].Price){
-                    cout << "You can't afford this property\n";
-                }
-                else{
-                    PlayerArray[Player].BuyProperty(PlayerArray, Board, Player);
-                }
-            }
-        }
-    }
-    else{ // ELSE PLAYER HAS LANDED ON NO PROPERTY
-        if (PlayerArray[Player].location == 4){
-            if (!PlayerArray[Player].CheckBankrupt(PlayerArray, Board, Player, 200, 4)){ // IF PLAYER LANDS ON TAX SQUARE
-                PlayerArray[Player].Bal -= 200;
-                cout << "You now have: " << PlayerArray[Player].Bal << "\n";
-            }
-        }
-        if (PlayerArray[Player].location == 38){
-            if (!PlayerArray[Player].CheckBankrupt(PlayerArray, Board, Player, 75, 4)){ // IF PLAYER LANDS ON TAX SQUARE
-                PlayerArray[Player].Bal -= 75;
-                cout << "You now have: " << PlayerArray[Player].Bal << "\n";
-            }
-        }
-        if (PlayerArray[Player].location == 30){ // IF PLAYER LANDS ON GO TO JAIL SQUARE
-            cout << "GO TO JAIL\n";
-            PlayerArray[Player].location = 10;
-            PlayerArray[Player].InJail = true;
-        }
-        else if (Board[PlayerArray[Player].location].Name == "Chance"){
-            PlayerArray[Player].Chance(PlayerArray, Board, Player, Doubles);
-        }
-        else if (Board[PlayerArray[Player].location].Name == "CommunityChest"){
-            PlayerArray[Player].CommunityChest(PlayerArray, Board, Player);
-        }
-    }
-    if (!Doubles){
+    if (PlayerArray[Player].DoublesCount == 3) {
+        cout << "3 doubles in a row!\nGO TO JAIL\n";
+        PlayerArray[Player].InJail = true;
+        PlayerArray[Player].location = 10;
         PlayerArray[Player].DoublesCount = 0;
     }
-    if (!FirstRoll) {
-        if (Doubles) {
-            if (PlayerArray[Player].DoublesCount == 3) {
-                cout << "3 doubles in a row!\nGO TO JAIL\n";
-                PlayerArray[Player].InJail = true;
+    else {
+        if (PlayerArray[Player].location + PlayerArray[Player].DiceRoll < 40) {
+            PlayerArray[Player].location = PlayerArray[Player].location + PlayerArray[Player].DiceRoll;
+        } else {
+            PlayerArray[Player].PassedGO(PlayerArray, Board, Player); // PLAYER GETS 200 FOR PASSING GO
+            PlayerArray[Player].location = PlayerArray[Player].location + PlayerArray[Player].DiceRoll - 40;
+        }
+        cout << PlayerArray[Player].PlayerName << " moved to " << Board[PlayerArray[Player].location].Name
+             << "\n"; // CHECK IF LOCATION IS PROPERTY
+        if (PlayerArray[Player].location == 10 && !PlayerArray[Player].InJail) {
+            cout << "Just visiting!\n";
+        }
+        if (Board[PlayerArray[Player].location].isProperty) { // CHECK IF LOCATION IS OWNED BY ANOTHER PLAYER
+            if (Board[PlayerArray[Player].location].Owned &&
+                Board[PlayerArray[Player].location].OwnerID != 4) { // IF PROPERTY IS OWNED
+                if (Board[PlayerArray[Player].location].OwnerID ==
+                    PlayerArray[Player].PID) { // IF PLAYER IS ON THEIR OWN PROPERTY
+                    cout << "\nThis property is yours\n";
+                } else {
+                    if (Board[PlayerArray[Player].location].isUtility) {
+                        PlayerArray[Player].PayRentUtility(PlayerArray, Board, Player);
+                    } else {
+                        PlayerArray[Player].PayRent(PlayerArray, Board, Player);
+                    }
+                }
+            } else { // IF PROPERTY IS UNOWNED
+                int BuyOrNo;
+                cout << "\nYou landed on " << Board[PlayerArray[Player].location].Name
+                     << "\nPress '1' to buy, '8' for property info, or '0' to skip: \n";
+                cout << "Current balance: $" << PlayerArray[Player].Bal << "\n";
+                cout << "Cost: $" << Board[PlayerArray[Player].location].Price << "\n";
+                cin >> BuyOrNo;
+
+                while (BuyOrNo == 8) {
+                    if (Board[PlayerArray[Player].location].isRailroad ||
+                        Board[PlayerArray[Player].location].isUtility) {
+                        PlayerArray[Player].UtilRRDetails(Board, PlayerArray[Player].location);
+                    } else {
+                        PlayerArray[Player].PropDetails(Board, PlayerArray[Player].location);
+                    }
+                    cout << "Press '1' to buy, '8' for property info, or '0' to skip: \n";
+                    cin >> BuyOrNo;
+                }
+                if (BuyOrNo == 1) { // IF BUYING
+                    if (PlayerArray[Player].Bal < Board[PlayerArray[Player].location].Price) {
+                        cout << "You can't afford this property\n";
+                    } else {
+                        PlayerArray[Player].BuyProperty(PlayerArray, Board, Player);
+                    }
+                }
+            }
+        } else { // ELSE PLAYER HAS LANDED ON NO PROPERTY
+            if (PlayerArray[Player].location == 4) {
+                if (!PlayerArray[Player].CheckBankrupt(PlayerArray, Board, Player, 200,
+                                                       4)) { // IF PLAYER LANDS ON TAX SQUARE
+                    PlayerArray[Player].Bal -= 200;
+                    cout << "You now have: " << PlayerArray[Player].Bal << "\n";
+                }
+            }
+            if (PlayerArray[Player].location == 38) {
+                if (!PlayerArray[Player].CheckBankrupt(PlayerArray, Board, Player, 75,
+                                                       4)) { // IF PLAYER LANDS ON TAX SQUARE
+                    PlayerArray[Player].Bal -= 75;
+                    cout << "You now have: " << PlayerArray[Player].Bal << "\n";
+                }
+            }
+            if (PlayerArray[Player].location == 30) { // IF PLAYER LANDS ON GO TO JAIL SQUARE
+                cout << "GO TO JAIL\n";
                 PlayerArray[Player].location = 10;
-                PlayerArray[Player].DoublesCount = 0;
-            } else {
+                PlayerArray[Player].InJail = true;
+            } else if (Board[PlayerArray[Player].location].Name == "Chance") {
+                PlayerArray[Player].Chance(PlayerArray, Board, Player, Doubles);
+            } else if (Board[PlayerArray[Player].location].Name == "CommunityChest") {
+                PlayerArray[Player].CommunityChest(PlayerArray, Board, Player);
+            }
+        }
+        if (!Doubles) {
+            PlayerArray[Player].DoublesCount = 0;
+        }
+        if (!FirstRoll) {
+            if (Doubles) {
                 cout << "Rolled doubles! \n";
                 PlayerArray[Player].RollDice(PlayerArray, Board, Player, false);
             }
@@ -388,19 +387,19 @@ void player::CheckMonopoly(struct location *Board, int Prop) { // CHECKS IF PLAY
 }
 
 void player::PropDetails(struct location *Board, int Prop) { // PRINTS OUT A DETAILED REPORT OF PROPERTY
-    cout << "---------------------------------------------------------------------------------";
-    cout << "\nProperty Name: " << Board[Prop].Name;
-    cout << "\nProperty Set: " << Board[Prop].Color;
-    cout << "\nProperty Price: $" << Board[Prop].Price;
-    cout << "\n\nRent: $" << Board[Prop].Rent;
-    cout << "\nRent (1 House): $" << Board[Prop].Rent1H;
-    cout << "\nRent (2 Houses): $" << Board[Prop].Rent2H;
-    cout << "\nRent (3 Houses): $" << Board[Prop].Rent3H;
-    cout << "\nRent (4 Houses): $" << Board[Prop].Rent4H;
-    cout << "\nRent (Hotel): $" << Board[Prop].RentH;
-    cout << "\n\nMortgage Value: $" << Board[Prop].MortgageVal;
-    cout << "\nHouse Cost: $" << Board[Prop].HouseP;
-    cout << "\n---------------------------------------------------------------------------------\n";
+        cout << "---------------------------------------------------------------------------------";
+        cout << "\nProperty Name: " << Board[Prop].Name;
+        cout << "\nProperty Set: " << Board[Prop].Color;
+        cout << "\nProperty Price: $" << Board[Prop].Price;
+        cout << "\n\nRent: $" << Board[Prop].Rent;
+        cout << "\nRent (1 House): $" << Board[Prop].Rent1H;
+        cout << "\nRent (2 Houses): $" << Board[Prop].Rent2H;
+        cout << "\nRent (3 Houses): $" << Board[Prop].Rent3H;
+        cout << "\nRent (4 Houses): $" << Board[Prop].Rent4H;
+        cout << "\nRent (Hotel): $" << Board[Prop].RentH;
+        cout << "\n\nMortgage Value: $" << Board[Prop].MortgageVal;
+        cout << "\nHouse Cost: $" << Board[Prop].HouseP;
+        cout << "\n---------------------------------------------------------------------------------\n";
 }
 
 // RENT UTILITY FUNCTIONALITY HASN'T BEEN TESTED YET
@@ -458,45 +457,41 @@ void player::UtilRRMonopoly(struct location *Board, int Prop, int Player) {
 void player::MyProperties(player *PlayerArray, struct location *Board, int Player) { // DISPLAYS PROPERTIES OWNED BY PLAYER
     cout << "-------------- " << PlayerArray[Player].PlayerName << "'s Properties --------------\n";
     for (int i = 0; i < 40; i++){
-        if (Board[i].OwnerID == Player) { //IF PROP IS OWNED BY PLAYER
-            if (Board[i].isRailroad || Board[i].isUtility){ //IF PROP IS UTILITY
-                cout << "-- " << Board[i].Name << " --\n";
-                if (Board[i].isRailroad) {
-                    cout << "Railroads Owned: " << Board[i].numHouse << "\n";
-                }
-                if (Board[i].isMonopoly) {
-                    cout << "Monopoly: YES\n";
-                }
-                else{
-                    cout << "Monopoly: NO\n";
-                }
-                if (Board[i].isMortgaged){
-                    cout << "Mortgaged: YES\n";
-                }
-                else{
-                    cout << "Mortgaged: NO\n\n";
-                }
-            }
-            else{ // ELSE NOT UTILITY PRINT
-                cout << "-- " << Board[i].Name << " --\nSet: " << Board[i].Color << "\n";
-                if (Board[i].isMonopoly){
-                    cout << "Monopoly: YES\n";
-                    if (Board[i].Hotel){
-                        cout << "Hotel: YES\n";
+        if (!Board[i].inTrade) {
+            if (Board[i].OwnerID == Player) { //IF PROP IS OWNED BY PLAYER
+                if (Board[i].isRailroad || Board[i].isUtility) { //IF PROP IS UTILITY
+                    cout << "-- " << Board[i].Name << " --\n";
+                    if (Board[i].isRailroad) {
+                        cout << "Railroads Owned: " << Board[i].numHouse << "\n";
                     }
-                    else{
-                        cout << "Hotel: NO\n";
-                        cout << "Houses: " << Board[i].numHouse << "\n";
+                    if (Board[i].isMonopoly) {
+                        cout << "Monopoly: YES\n";
+                    } else {
+                        cout << "Monopoly: NO\n";
                     }
-                }
-                else{
-                    cout << "Monopoly: NO\n";
-                }
-                if (Board[i].isMortgaged){
-                    cout << "Mortgaged: YES\n";
-                }
-                else{
-                    cout << "Mortgaged: NO\n\n";
+                    if (Board[i].isMortgaged) {
+                        cout << "Mortgaged: YES\n";
+                    } else {
+                        cout << "Mortgaged: NO\n\n";
+                    }
+                } else { // ELSE NOT UTILITY PRINT
+                    cout << "-- " << Board[i].Name << " --\nSet: " << Board[i].Color << "\n";
+                    if (Board[i].isMonopoly) {
+                        cout << "Monopoly: YES\n";
+                        if (Board[i].Hotel) {
+                            cout << "Hotel: YES\n";
+                        } else {
+                            cout << "Hotel: NO\n";
+                            cout << "Houses: " << Board[i].numHouse << "\n";
+                        }
+                    } else {
+                        cout << "Monopoly: NO\n";
+                    }
+                    if (Board[i].isMortgaged) {
+                        cout << "Mortgaged: YES\n";
+                    } else {
+                        cout << "Mortgaged: NO\n\n";
+                    }
                 }
             }
         }
@@ -861,6 +856,25 @@ void player::Chance(player *PlayerArray, struct location *Board, int Player, boo
             cout << "You now have $" << PlayerArray[Player].Bal << "\n";
         }
         PlayerArray[Player].location -= 3;
+        if (Board[PlayerArray[Player].location].Owned){
+            PlayerArray[Player].PayRent(PlayerArray, Board, Player);
+        }
+        else {
+            int BuyOrNo;
+            cout << "\nYou moved to " << Board[PlayerArray[Player].location].Name << "\nPress '1' to buy, '8' for property info, or '0' to skip: \n";
+            cout << "Current balance: $" << PlayerArray[Player].Bal << "\n";
+            cout << "Cost: $" << Board[PlayerArray[Player].location].Price << "\n";
+            cin >> BuyOrNo;
+            while (BuyOrNo == 8){
+                PlayerArray[Player].PropDetails(Board, PlayerArray[Player].location);
+                cout << "Press '1' to buy, '8' for property info, or '0' to skip: \n";
+                cin >> BuyOrNo;
+            }
+            if (BuyOrNo == 1){ // IF BUYING
+                PlayerArray[Player].BuyProperty(PlayerArray, Board, Player);
+            }
+        }
+
     }
     if (ChanceRoll == 11){
         cout << "Get out of jail free card!\n";
@@ -1236,37 +1250,29 @@ void player::Trade(player *PlayerArray, struct location *Board, int Player) {
             for (int i = 0; i < NumPropsGet; i++){
                 PlayerArray[TradeWith].PropDetails(Board, PropsToGet[i]);
             }
-            cout << "+ $" << CashGet << "\n\n" << PlayerArray[TradeWith].PlayerName << "\nPress '1' to Accept\nPress '0' to Reject\n";
+            cout << "+ $" << CashGet << "\n\n" << PlayerArray[TradeWith].PlayerName << ":\nPress '1' to Accept\nPress '0' to Reject\n";
             int Accept;
             cin >> Accept;
             if (Accept == 1){
-                cout << "IN ACCEPT\nNUMPROPSGET" << NumPropsGet << "\n";
                 PlayerArray[Player].Bal += CashGet;
                 PlayerArray[Player].Bal -= CashGive;
-                for (int i = 0; i < NumPropsGet; i++){
-                    cout << i << "  " << Board[PropsToGet[i]].OwnerID << "\n";
-                    cout << Board[PropsToGet[i]].Name << "\n";
-                    Board[PropsToGet[i]].OwnerID = Player;
-                    if (Board[PropsToGet[i]].isRailroad || Board[PropsToGet[i]].isUtility){
-                        PlayerArray[Player].UtilRRMonopoly(Board, PropsToGet[i], Player);
-                    }
-                    else {
-                        PlayerArray[Player].CheckMonopoly(Board, PropsToGet[i]);
-                    }
-                }
                 PlayerArray[TradeWith].Bal -= CashGet;
                 PlayerArray[TradeWith].Bal += CashGive;
-                for (int i = 0; i < NumPropsGive; i++){
-                    Board[PropsToGet[i]].OwnerID = TradeWith;
-                    if (Board[PropsToGive[i]].isRailroad || Board[PropsToGive[i]].isUtility){
-                        PlayerArray[TradeWith].UtilRRMonopoly(Board, PropsToGive[i], TradeWith);
-                    }
-                    else {
-                        PlayerArray[TradeWith].CheckMonopoly(Board, PropsToGet[i]);
+                for (int i = 0; i < 40; i++){
+                    if (Board[i].inTrade){
+                        cout << "GIVING " << Board[i].Name << "\nOWNERID " << Board[i].OwnerID << "\nPLAYER " << Player;
+                        if (Board[i].OwnerID == Player){
+                            cout << TradeWith << "\n";
+                            Board[i].OwnerID = TradeWith;
+                            cout << Board[i].OwnerID << "\n";
+                            Board[i].inTrade = false;
+                        }
+                        else if (Board[i].OwnerID == TradeWith) {
+                            Board[i].OwnerID = Player;
+                            Board[i].inTrade = false;
+                        }
                     }
                 }
-                cout << "Trade accepted!\n";
-                Choice = 0;
             }
         }
         if (Choice == 2){
@@ -1278,9 +1284,11 @@ void player::Trade(player *PlayerArray, struct location *Board, int Player) {
                 cin >> Prop;
                 for (int i = 0; i < 40; i++){
                     if (Board[i].Name == Prop && Board[i].OwnerID == Player){
+                        Board[i].inTrade = true;
                         PropsToGive[NumPropsGive] = i;
                         NumPropsGive++;
                         InnerChoice = 1;
+
                     }
                 }
                 if (Prop == "0"){
@@ -1300,6 +1308,7 @@ void player::Trade(player *PlayerArray, struct location *Board, int Player) {
                 cin >> Prop;
                 for (int i = 0; i < 40; i++){
                     if (Board[i].Name == Prop && Board[i].OwnerID == TradeWith){
+                        Board[i].inTrade = true;
                         PropsToGet[NumPropsGet] = i;
                         NumPropsGet++;
                         InnerChoice = 1;
@@ -1385,7 +1394,6 @@ int main() {
     IncomeTax.Rent = 200;
     IncomeTax.Owned = true; // rent tiles are "owned" so they can be deducted as rent easily
     IncomeTax.OwnerID = 4; // ownerID 5 is the bank, going to have function Pay to deduct/add to and from player accounts
-    IncomeTax.isTax = true;
     Board[4] = IncomeTax;
 
 
@@ -1395,7 +1403,6 @@ int main() {
     LuxuryTax.Rent = 75;
     LuxuryTax.Owned = true;
     LuxuryTax.OwnerID = 4;
-    LuxuryTax.isTax = true;
     Board[38] = LuxuryTax;
 
 

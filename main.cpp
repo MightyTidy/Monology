@@ -300,31 +300,34 @@ void player::TurnInJail(player PlayerArray[], class location Board[], int Player
     if (PlayerArray[Player].JailTurns == 3){ // PLAYER CAN LEAVE IF THERE FOR 3 TURNS
         PlayerArray[Player].InJail = false;
         PlayerArray[Player].JailTurns = 0;
+        cout << PlayerArray[Player].PlayerName << " has served their time!\n";
         PlayerArray[Player].RollDice(PlayerArray, Board, Player, false);
     }
-    int Choice;
-    cout << PlayerArray[Player].PlayerName << " is in jail\nPress '1' to pay $50 and leave, '0' to roll for doubles, or '8' to play a get out of jail free card\n";
-    cin >> Choice;
-    while (Choice == 8){ // WHILE LOOP TO MAKE AA GOOJF CARD PLAYABLE ONLY IF YOU OWN ONE
-        if (PlayerArray[Player].GOOJF) { // PLAYER USES GOOJF CARD
-            PlayerArray[Player].GOOJF = false;
+    else {
+        int Choice;
+        cout << PlayerArray[Player].PlayerName
+             << " is in jail\nPress '1' to pay $50 and leave, '0' to roll for doubles, or '8' to play a get out of jail free card\n";
+        cin >> Choice;
+        while (Choice == 8) { // WHILE LOOP TO MAKE AA GOOJF CARD PLAYABLE ONLY IF YOU OWN ONE
+            if (PlayerArray[Player].GOOJF) { // PLAYER USES GOOJF CARD
+                PlayerArray[Player].GOOJF = false;
+                PlayerArray[Player].InJail = false;
+                PlayerArray[Player].JailTurns = 0;
+                break;
+            } else {
+                cout
+                        << "You don't have a get out of jail free card\nPress '1' to pay $50 and leave or '0' to roll for doubles\n";
+                cin >> Choice;
+            }
+        }
+        if (Choice == 1) { //PLAYER PAYS 50 TO LEAVE
+            PlayerArray[Player].Bal = PlayerArray[Player].Bal - 50;
             PlayerArray[Player].InJail = false;
             PlayerArray[Player].JailTurns = 0;
-            break;
+            PlayerArray[Player].RollDice(PlayerArray, Board, Player, false);
+        } else if (Choice == 0) {
+            PlayerArray[Player].RollDice(PlayerArray, Board, Player, false);
         }
-        else{
-            cout << "You don't have a get out of jail free card\nPress '1' to pay $50 and leave or '0' to roll for doubles\n";
-            cin >> Choice;
-        }
-    }
-    if (Choice == 1){ //PLAYER PAYS 50 TO LEAVE
-        PlayerArray[Player].Bal = PlayerArray[Player].Bal - 50;
-        PlayerArray[Player].InJail = false;
-        PlayerArray[Player].JailTurns = 0;
-        PlayerArray[Player].RollDice(PlayerArray, Board, Player, false);
-    }
-    else if (Choice == 0){
-        PlayerArray[Player].RollDice(PlayerArray, Board, Player, false);
     }
 }
 
@@ -1260,16 +1263,25 @@ void player::Trade(player *PlayerArray, struct location *Board, int Player) {
                 PlayerArray[TradeWith].Bal += CashGive;
                 for (int i = 0; i < 40; i++){
                     if (Board[i].inTrade){
-                        cout << "GIVING " << Board[i].Name << "\nOWNERID " << Board[i].OwnerID << "\nPLAYER " << Player;
                         if (Board[i].OwnerID == Player){
-                            cout << TradeWith << "\n";
                             Board[i].OwnerID = TradeWith;
-                            cout << Board[i].OwnerID << "\n";
                             Board[i].inTrade = false;
+                            if (!Board[i].isRailroad && !Board[i].isUtility) {
+                                PlayerArray[Player].CheckMonopoly(Board, i);
+                            }
+                            else {
+                                PlayerArray[Player].UtilRRMonopoly(Board, i, Player);
+                            }
                         }
                         else if (Board[i].OwnerID == TradeWith) {
                             Board[i].OwnerID = Player;
                             Board[i].inTrade = false;
+                            if (!Board[i].isRailroad && !Board[i].isUtility) {
+                                PlayerArray[TradeWith].CheckMonopoly(Board, i);
+                            }
+                            else {
+                                PlayerArray[TradeWith].UtilRRMonopoly(Board, i, TradeWith);
+                            }
                         }
                     }
                 }
@@ -1896,8 +1908,9 @@ int main() {
 
     cout << PLayerArray[PlayerTurn].DiceRoll << "\n";
     cout << PLayerArray[PlayerTurn].PlayerName << " starts the game!\n";
-
+    // -----------------------------------------------------------------------------------------------------------------
     // GAME BEGINS
+    // -----------------------------------------------------------------------------------------------------------------
     while (PLayerArray[0].RemainingPlayers > 2){ // while two players are still playing
         PlayerTurn = PlayerTurn % 4; // KEEP TURN ORDER MOVING
         if (!PLayerArray[PlayerTurn].Bankrupt) {

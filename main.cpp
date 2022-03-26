@@ -4,6 +4,7 @@
 #include <time.h>
 #include <chrono>
 #include <thread>
+#include <cmath>
 
 using namespace std;
 using namespace this_thread;
@@ -35,6 +36,8 @@ public:
     bool Hotel = false;
     bool isMortgaged = false;
     bool inTrade = false;
+    int NumSetOwned; // NUM OF SAME SET PROPS OWNED
+
 
 };
 
@@ -75,6 +78,10 @@ public:
     bool CheckBankrupt (player PlayerArray[], class location Board[], int Player, int Amt, int Payee);
     void DisplayBoard (player PlayerArray[], class location Board[], int Prop);
     void Trade(player PlayerArray[], class location Board[], int Player);
+    bool PossibleMonopoly (player PlayerArray[], class location Board[], int Player, int Prop, int ManyProps); // CHECKS IF A PLAYER RECEIVING A PROPERTY WILL RESULT IN A MONOPOLY
+    void BOTTrade (player PlayerArray[], class location Board[], int Player, int Prop);
+    void BOTBuyHouse (player PlayerArray[], class location Board[], int Player, int Prop, bool Set);
+    void BOTMortgage (player PlayerArray[], class location Board[], int Player, int Prop, bool Mortgage);
 
 
 };
@@ -101,7 +108,7 @@ void player::RollDice(player PlayerArray[], struct location *Board, int Player, 
         cin >> inplace;
     }
     else{
-        sleep_for(2s);
+        sleep_for(1.65s);
     }
     cout << PlayerArray[Player].PlayerName << " rolled ";
     int roll1 = 0, roll2 = 0, roll = 0;
@@ -240,6 +247,7 @@ void player::MovePlayer(player *PlayerArray, struct location *Board, int Player,
         }
         if (!FirstRoll) {
             if (Doubles && !PlayerArray[Player].Bankrupt) {
+                sleep_for(1s);
                 cout << "\nRolled doubles! \n\n";
                 PlayerArray[Player].RollDice(PlayerArray, Board, Player, false);
             }
@@ -317,7 +325,7 @@ void player::BuyProperty(player *PlayerArray, struct location *Board, int Player
         PlayerArray[Player].CheckMonopoly(Board, CurrProp);
     }
 }
-
+// BOT CODE NEEDS TESTING
 void player::TurnInJail(player PlayerArray[], class location Board[], int Player) { // JAILFUNCTION
         PlayerArray[Player].JailTurns++; //ADD 1 TO COUNT OF TURNS IN JAIL
         if (PlayerArray[Player].JailTurns == 3) { // PLAYER CAN LEAVE IF THERE FOR 3 TURNS
@@ -397,13 +405,17 @@ void player::CheckMonopoly(struct location *Board, int Prop) { // CHECKS IF PLAY
                 if (Board[i].Color == Board[Prop].Color && Board[i].OwnerID == Board[Prop].OwnerID){ // IF COLOR IS THE SAME AS PROP AND OWNER IS THE SAME AS PROP
                     cout << Board[i].Name << "\n";
                     Board[i].isMonopoly = true;
+                    Board[i].NumSetOwned = NumOwned;
                 }
             }
         }
         else { // SET MONOPOLY TO FALSE - THIS IS NEEDED IF A PLAYER SELLS A PROPERTY FROM A SET THEY HAVE A MONOPOLY IN
             for (int i = Prop - 4; i < Prop + 4; i++) {
-                if (Board[i].Color == Board[Prop].Color && Board[i].OwnerID == Board[Prop].OwnerID) { // IF COLOR IS THE SAME AS PROP AND OWNER IS THE SAME AS PROP
+                if (Board[i].Color == Board[Prop].Color) { // IF COLOR IS THE SAME AS PROP AND OWNER IS THE SAME AS PROP
                     Board[i].isMonopoly = false;
+                }
+                if (Board[i].OwnerID == Board[Prop].OwnerID){
+                    Board[i].NumSetOwned = NumOwned;
                 }
             }
         }
@@ -422,6 +434,9 @@ void player::CheckMonopoly(struct location *Board, int Prop) { // CHECKS IF PLAY
             for (int i = Prop - 4; i < Prop + 4; i++) {
                 if (Board[i].Color == Board[Prop].Color) {
                     Board[i].isMonopoly = false;
+                }
+                if (Board[i].OwnerID == Board[Prop].OwnerID){
+                    Board[i].NumSetOwned = NumOwned;
                 }
             }
         }
@@ -602,7 +617,7 @@ void player::UpdateProp(player *PlayerArray, struct location *Board, int Player)
         }
     }
 }
-
+// ADD CHECK TO MAKE SURE PLAYERS HAVE EVEN HOUSES ON EACH PROP
 void player::BuySellHouseHotel(player *PlayerArray, struct location *Board, int Player, int Prop, bool Buying) {
     if (!Board[Prop].isRailroad && !Board[Prop].isUtility) {
         if (Buying) {
@@ -629,13 +644,14 @@ void player::BuySellHouseHotel(player *PlayerArray, struct location *Board, int 
                         }
                         else {
                             for (int i = 0; i < 40; i++) {
-                                if (Board[i].Color == Board[Prop].Color) {
-                                    PlayerArray[Player].Bal -= Board[Prop].HouseP;
-                                    if (Board[i].numHouse == 4) {
-                                        Board[i].Hotel = true;
-                                    }
-                                    else if (!Board[i].Hotel) {
-                                        Board[i].numHouse++;
+                                if (!Board[i].Hotel) {
+                                    if (Board[i].Color == Board[Prop].Color) {
+                                        PlayerArray[Player].Bal -= Board[Prop].HouseP;
+                                        if (Board[i].numHouse == 4) {
+                                            Board[i].Hotel = true;
+                                        } else {
+                                            Board[i].numHouse++;
+                                        }
                                     }
                                 }
                             }
@@ -739,7 +755,7 @@ void player::UtilRRDetails(struct location *Board, int Prop) {
     cout << "\n\nMortgage Value: $" << Board[Prop].MortgageVal;
     cout << "\n---------------------------------------------------------------------------------\n";
 }
-
+// ADD BOT CODE FOR CARDS THAT MOVE PLAYER
 void player::Chance(player *PlayerArray, struct location *Board, int Player, bool Doubles) {
     int ChanceRoll = rand() % (16 - 1 + 1) + 1;
     if (ChanceRoll == 1){ // MOVE TO GO
@@ -1262,7 +1278,7 @@ bool player::CheckBankrupt(player *PlayerArray, struct location *Board, int Play
 void player::DisplayBoard(player *PlayerArray, struct location *Board, int Prop) {
 
 }
-
+// BOT CODE NOT TESTED - MONOPOLY VALUE NOT TESTED
 void player::Trade(player *PlayerArray, struct location *Board, int Player) {
     cout << "-------------- TRADE --------------\n";
     int NumPropsGive = 0; // NUMBER OF PROPERTIES PLAYER IS GIVING
@@ -1283,53 +1299,119 @@ void player::Trade(player *PlayerArray, struct location *Board, int Player) {
     cout << "Press '2' to offer properties\nPress '3' to request properties\nPress '4' to offer cash\nPress '5' to request cash\n\nPress '1' to send offer\nPress '0' to cancel\n";
     int Choice;
     cin >> Choice;
+    int Accept;
     while (Choice != 0){
         if (Choice == 1){
-            cout << PlayerArray[Player].PlayerName << " offers\n";
-            for (int i = 0; i < NumPropsGive; i++){
-                if (Board[PropsToGive[i]].isRailroad || Board[PropsToGive[i]].isUtility){
-                    PlayerArray[Player].UtilRRDetails(Board, PropsToGive[i]);
+            if (!PlayerArray[TradeWith].Bot) {
+                cout << PlayerArray[Player].PlayerName << " offers\n";
+                for (int i = 0; i < NumPropsGive; i++) {
+                    if (Board[PropsToGive[i]].isRailroad || Board[PropsToGive[i]].isUtility) {
+                        PlayerArray[Player].UtilRRDetails(Board, PropsToGive[i]);
+                    } else {
+                        PlayerArray[Player].PropDetails(Board, PropsToGive[i]);
+                    }
+                }
+                cout << "+ $" << CashGive << "\n\n\n";
+                cout << PlayerArray[Player].PlayerName << " requests\n";
+                for (int i = 0; i < NumPropsGet; i++) {
+                    PlayerArray[TradeWith].PropDetails(Board, PropsToGet[i]);
+                }
+                cout << "+ $" << CashGet << "\n\n" << PlayerArray[TradeWith].PlayerName
+                     << ":\nPress '1' to Accept\nPress '0' to Reject\n";
+                cin >> Accept;
+            }
+            else { // BOT CODE
+                // =====================================================================================================
+                int BotVal = 0; // FIND THE VALUE OF EACH SIDE OF THE TRADE
+                int PlayerVal = 0;
+
+                int NumSameColor = 1;
+                int CantBeEven = 1; // check to ensure that extra value isnt given if 2 of the same color prop are in the same trade
+                PlayerVal += CashGive;
+                for (int i = 0; i < NumPropsGive; i++){
+                    PlayerVal += Board[PropsToGive[i]].Price;
+                    if (Board[PropsToGive[i]].isMortgaged){
+                        PlayerVal -= Board[PropsToGive[i]].MortgageVal;
+                    }
+                    for (int j = 0; j < NumPropsGive; j++){
+                        if (CantBeEven % 2 != 1) {
+                            if (Board[PropsToGive[i]].Color == Board[PropsToGive[j]].Color &&
+                                Board[PropsToGive[i]].Name != Board[PropsToGive[j]].Name) {
+                                NumSameColor++;
+                                CantBeEven++;
+                            }
+                        }
+                    }
+                    if (PlayerArray[TradeWith].PossibleMonopoly(PlayerArray, Board, TradeWith, PropsToGive[i], NumSameColor)){
+                        PlayerVal += 100; // ADD 100 TO VALUE OF PLAYERS TRADE IF BOT WILL GET A MONOPOLY
+                    }
+                }
+
+                NumSameColor = 1;
+                CantBeEven = 1;
+                BotVal += CashGet;
+                for (int i = 0; i < NumPropsGet; i++){
+                    BotVal += Board[PropsToGet[i]].Price;
+                    if (Board[PropsToGet[i]].isMortgaged){
+                        BotVal -= Board[PropsToGet[i]].MortgageVal;
+                    }
+                    for (int j = 0; j < NumPropsGet; j++){
+                        if (CantBeEven % 2 != 1) {
+                            if (Board[PropsToGet[i]].Color == Board[PropsToGet[j]].Color &&
+                                Board[PropsToGet[i]].Name != Board[PropsToGet[j]].Name) {
+                                NumSameColor++;
+                                CantBeEven++;
+                            }
+                        }
+                    }
+                    if (PlayerArray[Player].PossibleMonopoly(PlayerArray, Board, Player, PropsToGet[i], NumSameColor)){
+                        BotVal += 100; // ADD 100 TO VALUE OF BOTS TRADE IF PLAYER WILL GET A MONOPOLY
+                    }
+                }
+                cout << PlayerVal << "\n" << BotVal << "\n";
+                if (BotVal <= PlayerVal + 50){
+                    sleep_for(1.5s);
+                    Accept = 1;
                 }
                 else {
-                    PlayerArray[Player].PropDetails(Board, PropsToGive[i]);
+                    sleep_for(1.5s);
+                    Accept = 0;
                 }
+                // =====================================================================================================
             }
-            cout << "+ $" << CashGive << "\n\n\n";
-            cout << PlayerArray[Player].PlayerName << " requests\n";
-            for (int i = 0; i < NumPropsGet; i++){
-                PlayerArray[TradeWith].PropDetails(Board, PropsToGet[i]);
-            }
-            cout << "+ $" << CashGet << "\n\n" << PlayerArray[TradeWith].PlayerName << ":\nPress '1' to Accept\nPress '0' to Reject\n";
-            int Accept;
-            cin >> Accept;
-            if (Accept == 1){
+            if (Accept == 1) {
+                cout << "Offer accepted\n";
                 PlayerArray[Player].Bal += CashGet;
                 PlayerArray[Player].Bal -= CashGive;
                 PlayerArray[TradeWith].Bal -= CashGet;
                 PlayerArray[TradeWith].Bal += CashGive;
-                for (int i = 0; i < 40; i++){
-                    if (Board[i].inTrade){
-                        if (Board[i].OwnerID == Player){
+                for (int i = 0; i < 40; i++) {
+                    if (Board[i].inTrade) {
+                        if (Board[i].OwnerID == Player) {
                             Board[i].OwnerID = TradeWith;
                             Board[i].inTrade = false;
                             if (!Board[i].isRailroad && !Board[i].isUtility) {
                                 PlayerArray[Player].CheckMonopoly(Board, i);
-                            }
-                            else {
+                            } else {
                                 PlayerArray[Player].UtilRRMonopoly(Board, i, TradeWith);
                             }
-                        }
-                        else if (Board[i].OwnerID == TradeWith) {
+                        } else if (Board[i].OwnerID == TradeWith) {
                             Board[i].OwnerID = Player;
                             Board[i].inTrade = false;
                             if (!Board[i].isRailroad && !Board[i].isUtility) {
                                 PlayerArray[TradeWith].CheckMonopoly(Board, i);
-                            }
-                            else {
+                            } else {
                                 PlayerArray[TradeWith].UtilRRMonopoly(Board, i, Player);
                             }
                         }
                     }
+                }
+                Choice = 0;
+            }
+            else {
+                cout << "\nTrade offer rejected\n";
+                for (int i = 0; i < 40; i++){
+                    Board[i].inTrade = false;
                 }
                 Choice = 0;
             }
@@ -1399,6 +1481,99 @@ void player::Trade(player *PlayerArray, struct location *Board, int Player) {
             cout << "Press '2' to offer properties\nPress '3' to request properties\nPress '4' to offer cash\nPress '5' to request cash\nPress '1' to send offer\nPress '0' to cancel\n\n";
             cin >> Choice;
         }
+    }
+}
+// NOT TESTED YET
+bool player::PossibleMonopoly(player *PlayerArray, struct location *Board, int Player, int Prop, int ManyProps) {
+    for (int i = Prop - 4; i < Prop + 4; i++){
+        if (Board[i].Color == Board[Prop].Color && Board[i].OwnerID == Player){
+            ManyProps++;
+        }
+    }
+    if (Board[Prop].Color == "Purple" || Board[Prop].Color == "DarkBlue"){
+        if (ManyProps == 2){
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+    else {
+        if (ManyProps == 3){
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+}
+// BOT TRADE NOT EVEN CLOSE TO BEING DONE
+void player::BOTTrade(player *PlayerArray, struct location *Board, int Player, int Prop) {
+    int TraderVal = 0;
+    int TradeeVal = Board[Prop].Price;
+    int TraderProp;
+    int Tradee = Board[Prop].OwnerID;
+    for (int i = 0; i < 40; i++){ // Find player prop that closely matches other players prop in value
+        if (Board[i].OwnerID == Player && !Board[i].isMonopoly){
+            if (TraderVal == 0){
+                TraderVal = Board[i].Price;
+                TraderProp = i;
+            }
+            else {
+                if (abs(TraderVal - TradeeVal) > abs(TradeeVal - Board[i].Price)){
+                    TraderVal = Board[i].Price;
+                    TraderProp = i;
+                }
+            }
+
+        }
+    }
+}
+// ADD OUTPUT MESSAGES
+void player::BOTBuyHouse(player *PlayerArray, struct location *Board, int Player, int Prop, bool Set) {
+    if (!Board[Prop].isRailroad && !Board[Prop].isUtility) {
+        if (!Board[Prop].isMortgaged) {
+            if (!Set) {
+                PlayerArray[Player].Bal -= Board[Prop].HouseP;
+                if (Board[Prop].numHouse == 4) {
+                    Board[Prop].Hotel = true;
+                    cout << PlayerArray[Player].PlayerName << " bought a hotel on " << Board[Prop].Name << "\n";
+                }
+                else {
+                    Board[Prop].numHouse++;
+                    cout << PlayerArray[Player].PlayerName << " bought a house on " << Board[Prop].Name << "\n";
+                }
+            }
+            else if (Set) {
+                for (int i = Prop - 4; i < Prop + 4; i++) {
+                    if (!Board[i].Hotel) {
+                        if (Board[i].Color == Board[Prop].Color) {
+                            PlayerArray[Player].Bal -= Board[Prop].HouseP;
+                            if (Board[i].numHouse == 4) {
+                                Board[i].Hotel = true;
+                                cout << PlayerArray[Player].PlayerName << " bought a hotel on " << Board[i].Name << "\n";
+                            } else {
+                                Board[i].numHouse++;
+                                cout << PlayerArray[Player].PlayerName << " bought a house on " << Board[i].Name << "\n";
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+void player::BOTMortgage(player *PlayerArray, struct location *Board, int Player, int Prop, bool Mortgage) {
+    if (Mortgage) {
+        PlayerArray[Player].Bal += Board[Prop].MortgageVal;
+        Board[Prop].isMortgaged = true;
+        cout << PlayerArray[Player].PlayerName << " mortgaged " << Board[Prop].Name << "\n";
+    }
+    else {
+        PlayerArray[Player].Bal -= Board[Prop].MortgageVal * 1.1;
+        Board[Prop].isMortgaged = false;
+        cout << PlayerArray[Player].PlayerName << " unmortgaged " << Board[Prop].Name << "\n";
     }
 }
 
@@ -1934,7 +2109,7 @@ int main() {
             PlayerTurn = i;
         }
     }
-
+    sleep_for(1s);
     cout << "\n" << PLayerArray[PlayerTurn].PlayerName << " starts the game!\n\n";
     // -----------------------------------------------------------------------------------------------------------------
     // GAME BEGINS
@@ -1988,7 +2163,264 @@ int main() {
                     PlayerTurn++;
                 }
                 PLayerArray[PlayerTurn].RollDice(PLayerArray, Board, PlayerTurn, false); // ROLL DICE FOR TURN
+
+                // FOR BOT BANKRUPT CODE HAVE THE BOT CHECK NONMONOPOLIES TO MORTGAGE BEFORE MONOPOLIES
+                for (int i = 39; i > 0; i--){ // UNMORTGAGE MONOPOLY PROPS FIRST
+                    if (Board[i].isMonopoly && Board[i].OwnerID == PlayerTurn){
+                        if (Board[i].isMortgaged && PLayerArray[PlayerTurn].Bal > Board[i].MortgageVal * 2){
+                            PLayerArray[PlayerTurn].BOTMortgage(PLayerArray, Board, PlayerTurn, i, false);
+                        }
+                    }
+                }
+                for (int i = 39; i > 0; i--){ // UNMORTGAGE REGULAR PROPS AFTER
+                    if (Board[i].isMortgaged && PLayerArray[PlayerTurn].Bal > Board[i].MortgageVal * 2){
+                        PLayerArray[PlayerTurn].BOTMortgage(PLayerArray, Board, PlayerTurn, i, false);
+                    }
+                }
+                for (int i = 39; i > 0; i--){ // CHECK FOR ANY HOUSES BOT CAN BUY - START WITH MOST EXPENSIVE PROPERTIES
+                    if (Board[i].isMonopoly && Board[i].OwnerID == PlayerTurn){
+                        // ADD CHECK THAT CHANGES I BASED ON WHERE PLAYERS ARE LIKELY TO LAND NEXT
+                        if (i == 39){ // IF DARK BLUE
+                            if (PLayerArray[PlayerTurn].Bal > 449){ // IF ABLE TO AFFORD SET BUY SET
+                                PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, i, true);
+                            }
+                            else if (PLayerArray[PlayerTurn].Bal > 249){ // IF NOT CHECK TO SEE IF BOT CAN AFFORD ONE
+                                if (Board[39].numHouse > Board[37].numHouse){
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 37, false);
+                                }
+                                else {
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 39, false);
+                                }
+                            }
+                        } // DARK BLUE
+                        else if (i == 34){ // ELSE IF GREEN
+                            if (PLayerArray[PlayerTurn].Bal > 649){ // IF ABLE TO AFFORD SET BUY SET
+                                PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, i, true);
+                            }
+                            else if (PLayerArray[PlayerTurn].Bal > 449){ // IF NOT CHECK TO SEE IF BOT CAN AFFORD TWO
+                                if (Board[34].numHouse > Board[32].numHouse){
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 32, false);
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 31, false);
+
+                                }
+                                else if (Board[32].numHouse == Board[31].numHouse){
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 34, false);
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 32, false);
+                                }
+                                else {
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 31, false);
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 34, false);
+                                }
+                            }
+                            else if (PLayerArray[PlayerTurn].Bal > 249) { // IF NOT CHECK TO SEE IF BOT CAN AFFORD ONE
+                                if (Board[34].numHouse > Board[32].numHouse){
+                                    if (Board[32].numHouse > Board[31].numHouse) {
+                                        PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 31, false);
+                                    }
+                                    else {
+                                        PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 32, false);
+                                    }
+                                }
+                                else {
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 34, false);
+                                }
+                            }
+                        } // GREEN
+                        else if (i == 29){ // ELSE IF YELLOW
+                            if (PLayerArray[PlayerTurn].Bal > 499){ // IF ABLE TO AFFORD SET BUY SET
+                                PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, i, true);
+                            }
+                            else if (PLayerArray[PlayerTurn].Bal > 349){ // IF NOT CHECK TO SEE IF BOT CAN AFFORD TWO
+                                if (Board[29].numHouse > Board[27].numHouse){
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 27, false);
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 26, false);
+
+                                }
+                                else if (Board[27].numHouse == Board[26].numHouse){
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 29, false);
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 27, false);
+                                }
+                                else {
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 26, false);
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 29, false);
+                                }
+                            }
+                            else if (PLayerArray[PlayerTurn].Bal > 249) { // IF NOT CHECK TO SEE IF BOT CAN AFFORD ONE
+                                if (Board[29].numHouse > Board[27].numHouse){
+                                    if (Board[27].numHouse > Board[26].numHouse) {
+                                        PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 26, false);
+                                    }
+                                    else {
+                                        PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 27, false);
+                                    }
+                                }
+                                else {
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 29, false);
+                                }
+                            }
+                        } // YELLOW
+                        else if (i == 24){ // ELSE IF RED
+                            if (PLayerArray[PlayerTurn].Bal > 499){ // IF ABLE TO AFFORD SET BUY SET
+                                PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, i, true);
+                            }
+                            else if (PLayerArray[PlayerTurn].Bal > 349){ // IF NOT CHECK TO SEE IF BOT CAN AFFORD TWO
+                                if (Board[24].numHouse > Board[23].numHouse){
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 23, false);
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 21, false);
+
+                                }
+                                else if (Board[23].numHouse == Board[21].numHouse){
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 24, false);
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 23, false);
+                                }
+                                else {
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 21, false);
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 24, false);
+                                }
+                            }
+                            else if (PLayerArray[PlayerTurn].Bal > 249) { // IF NOT CHECK TO SEE IF BOT CAN AFFORD ONE
+                                if (Board[24].numHouse > Board[23].numHouse){
+                                    if (Board[23].numHouse > Board[21].numHouse) {
+                                        PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 21, false);
+                                    }
+                                    else {
+                                        PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 23, false);
+                                    }
+                                }
+                                else {
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 24, false);
+                                }
+                            }
+                        } // RED
+                        else if (i == 19){ // ELSE IF ORANGE
+                            if (PLayerArray[PlayerTurn].Bal > 349){ // IF ABLE TO AFFORD SET BUY SET
+                                PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, i, true);
+                            }
+                            else if (PLayerArray[PlayerTurn].Bal > 249){ // IF NOT CHECK TO SEE IF BOT CAN AFFORD TWO
+                                if (Board[19].numHouse > Board[18].numHouse){
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 18, false);
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 16, false);
+
+                                }
+                                else if (Board[18].numHouse == Board[16].numHouse){
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 19, false);
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 18, false);
+                                }
+                                else {
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 16, false);
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 19, false);
+                                }
+                            }
+                            else if (PLayerArray[PlayerTurn].Bal > 159) { // IF NOT CHECK TO SEE IF BOT CAN AFFORD ONE
+                                if (Board[19].numHouse > Board[18].numHouse){
+                                    if (Board[18].numHouse > Board[16].numHouse) {
+                                        PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 16, false);
+                                    }
+                                    else {
+                                        PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 18, false);
+                                    }
+                                }
+                                else {
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 19, false);
+                                }
+                            }
+                        } // ORANGE
+                        else if (i == 14){ // ELSE IF PINK
+                            if (PLayerArray[PlayerTurn].Bal > 349){ // IF ABLE TO AFFORD SET BUY SET
+                                PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, i, true);
+                            }
+                            else if (PLayerArray[PlayerTurn].Bal > 249){ // IF NOT CHECK TO SEE IF BOT CAN AFFORD TWO
+                                if (Board[14].numHouse > Board[13].numHouse){
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 13, false);
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 11, false);
+
+                                }
+                                else if (Board[13].numHouse == Board[11].numHouse){
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 14, false);
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 13, false);
+                                }
+                                else {
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 11, false);
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 14, false);
+                                }
+                            }
+                            else if (PLayerArray[PlayerTurn].Bal > 159) { // IF NOT CHECK TO SEE IF BOT CAN AFFORD ONE
+                                if (Board[14].numHouse > Board[13].numHouse){
+                                    if (Board[13].numHouse > Board[11].numHouse) {
+                                        PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 11, false);
+                                    }
+                                    else {
+                                        PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 13, false);
+                                    }
+                                }
+                                else {
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 14, false);
+                                }
+                            }
+                        } // PINK
+                        else if (i == 9){ // ELSE IF LIGHT BLUE
+                            if (PLayerArray[PlayerTurn].Bal > 199){ // IF ABLE TO AFFORD SET BUY SET
+                                PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, i, true);
+                            }
+                            else if (PLayerArray[PlayerTurn].Bal > 149){ // IF NOT CHECK TO SEE IF BOT CAN AFFORD TWO
+                                if (Board[9].numHouse > Board[8].numHouse){
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 8, false);
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 6, false);
+
+                                }
+                                else if (Board[8].numHouse == Board[6].numHouse){
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 9, false);
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 8, false);
+                                }
+                                else {
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 6, false);
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 9, false);
+                                }
+                            }
+                            else if (PLayerArray[PlayerTurn].Bal > 99) { // IF NOT CHECK TO SEE IF BOT CAN AFFORD ONE
+                                if (Board[9].numHouse > Board[8].numHouse){
+                                    if (Board[8].numHouse > Board[6].numHouse) {
+                                        PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 6, false);
+                                    }
+                                    else {
+                                        PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 8, false);
+                                    }
+                                }
+                                else {
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 9, false);
+                                }
+                            }
+                        } // LIGHT BLUE
+                        else if (i == 3){ // IF PURPLE
+                            if (PLayerArray[PlayerTurn].Bal > 149){ // IF ABLE TO AFFORD SET BUY SET
+                                PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, i, true);
+                            }
+                            else if (PLayerArray[PlayerTurn].Bal > 99){ // IF NOT CHECK TO SEE IF BOT CAN AFFORD ONE
+                                if (Board[3].numHouse > Board[1].numHouse){
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 1, false);
+                                }
+                                else {
+                                    PLayerArray[PlayerTurn].BOTBuyHouse(PLayerArray, Board, PlayerTurn, 3, false);
+                                }
+                            }
+                        } // PURPLE
+                    }
+                }
+
+                /*
+                int PropGive; // After turn check if there are any favorable trades for bot to make
+                int PropGet;
+                bool Traded = false; // Only want bots trading once per turn
+                for (int i = 0; i < 40; i++){
+                    if (PLayerArray[PlayerTurn].PossibleMonopoly(PLayerArray, Board, PlayerTurn, i, 1) && !Traded && Board[i].Owned){ // IF A BOT WILL GET A MONOPOLY FROM ANOTHER PLAYER'S PROPERTY
+                        PLayerArray[PlayerTurn].BOTTrade(PLayerArray, Board, PlayerTurn, i);
+                        // BOT TRADE OFFER CODE HERE
+                    }
+                }*/
+
+
                 // ADD CHECKS FOR TRADE POSSIBILITIES AND WHATNOT
+                // ADD CHECK FOR MONOPOLIES FOR HOUSE BUYING, MAKE FOR LOOP IN REVERSE ORDER TO BUY MOST EXPENSIVE HOUSES FIRST
                 sleep_for(1.5s);
                 PlayerTurn++;
             } else { // SKIP BANKRUPT PLAYERS TURN

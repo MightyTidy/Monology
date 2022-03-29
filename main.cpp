@@ -84,6 +84,8 @@ public:
     void BOTBuyHouse (player PlayerArray[], class location Board[], int Player, int Prop, bool Set);
     void BOTMortgage (player PlayerArray[], class location Board[], int Player, int Prop, bool Mortgage);
     int BOTChooseHouseProp (player PlayerArray[], class location Board[], int Player);
+    bool BOTBankrupt (player PlayerArray[], class location Board[], int Player, int Amt, int Payee);
+    void BOTSellHouse (player PlayerArray[], class location Board[], int Player, int Prop, bool Set);
 
 
 };
@@ -1240,37 +1242,45 @@ void player::CommunityChest(player *PlayerArray, struct location *Board, int Pla
 // NEEDS TESTING
 bool player::CheckBankrupt(player *PlayerArray, struct location *Board, int Player, int Amt, int Payee) {
     if (PlayerArray[Player].Bal <= Amt){
-        int Choice = 0;
-        cout << "You can't afford this payment!\nPress '1' to go bankrupt\nPress '2' to trade\nPress '3' to mortgage or sell houses/hotels\n";
-        cin >> Choice;
-        while (Choice != 4 && PlayerArray[Player].Bal <= Amt){
-            if (Choice == 1){ // IF PLAYER GOES BANKRUPT
-                cout << PlayerArray[Player].Name << ", you've gone bankrupt!\n";
-                PlayerArray[Payee].Bal += PlayerArray[Player].Bal; // TRANSFER BANKRUPT PLAYERS BALANCE TO PAYEE
-                PlayerArray[Player].Bal = 0;
-                for (int i = 0; i < 40; i++){
-                    if (Board[i].OwnerID == PlayerArray[Player].PID){ // TRANSFER BANKRUPT PLAYERS PROPERTIES
-                        Board[i].OwnerID = PlayerArray[Payee].PID;
-                        PlayerArray[Payee].CheckMonopoly(Board, i); // CHECK TO SEE IF PAYEE NOW HAS MONOPOLY
-                    }
-                }
-                if (PlayerArray[Player].GOOJF){ // PAYEE GETS BANKRUPT PLAYERS GET OUT OF JAIL FREE CARD
-                    PlayerArray[Payee].GOOJF = true;
-                }
-                PlayerArray[Player].Bankrupt = true;
-                return true;
+        if (PlayerArray[Player].Bot){
+            if (PlayerArray[Player].BOTBankrupt(PlayerArray, Board, Player, Amt, Payee)){
+
             }
-            else if (Choice == 2){
-                PlayerArray[Player].Trade(PlayerArray, Board, Player);
-            }
-            else if (Choice == 3){
-                PlayerArray[Player].UpdateProp(PlayerArray, Board, Player);
-            }
-            cout << "Press '1' to go bankrupt\nPress '2' to trade\nPress '3' to mortgage or sell houses/hotels\nPress 4 to pay\n";
+        }
+        else {
+            int Choice = 0;
+            cout
+                    << "You can't afford this payment!\nPress '1' to go bankrupt\nPress '2' to trade\nPress '3' to mortgage or sell houses/hotels\n";
             cin >> Choice;
-            if (PlayerArray[Player].Bal <= Amt){
-                cout << "You can't afford this payment!\nPress '1' to go bankrupt\nPress '2' to trade\nPress '3' to mortgage or sell houses/hotels\n";
+            while (Choice != 4 && PlayerArray[Player].Bal <= Amt) {
+                if (Choice == 1) { // IF PLAYER GOES BANKRUPT
+                    cout << PlayerArray[Player].Name << ", you've gone bankrupt!\n";
+                    PlayerArray[Payee].Bal += PlayerArray[Player].Bal; // TRANSFER BANKRUPT PLAYERS BALANCE TO PAYEE
+                    PlayerArray[Player].Bal = 0;
+                    for (int i = 0; i < 40; i++) {
+                        if (Board[i].OwnerID == PlayerArray[Player].PID) { // TRANSFER BANKRUPT PLAYERS PROPERTIES
+                            Board[i].OwnerID = PlayerArray[Payee].PID;
+                            PlayerArray[Payee].CheckMonopoly(Board, i); // CHECK TO SEE IF PAYEE NOW HAS MONOPOLY
+                        }
+                    }
+                    if (PlayerArray[Player].GOOJF) { // PAYEE GETS BANKRUPT PLAYERS GET OUT OF JAIL FREE CARD
+                        PlayerArray[Payee].GOOJF = true;
+                    }
+                    PlayerArray[Player].Bankrupt = true;
+                    return true;
+                } else if (Choice == 2) {
+                    PlayerArray[Player].Trade(PlayerArray, Board, Player);
+                } else if (Choice == 3) {
+                    PlayerArray[Player].UpdateProp(PlayerArray, Board, Player);
+                }
+                cout
+                        << "Press '1' to go bankrupt\nPress '2' to trade\nPress '3' to mortgage or sell houses/hotels\nPress 4 to pay\n";
                 cin >> Choice;
+                if (PlayerArray[Player].Bal <= Amt) {
+                    cout
+                            << "You can't afford this payment!\nPress '1' to go bankrupt\nPress '2' to trade\nPress '3' to mortgage or sell houses/hotels\n";
+                    cin >> Choice;
+                }
             }
         }
     }
@@ -1609,6 +1619,116 @@ int player::BOTChooseHouseProp(player PlayerArray[], class location Board[], int
         }
     }
     return Prop;
+}
+
+bool player::BOTBankrupt(player *PlayerArray, struct location *Board, int Player, int Amt, int Payee) {
+    int Prop = 0;
+    bool AllMortgaged = false;
+    while (!AllMortgaged){ // WHILE LOOP TO MORTGAGE FOR FUNDS CHECKING NON MONOPOLY TILES FIRST
+        if (Board[Prop].OwnerID == Player && !Board[Prop].isMortgaged && !Board[Prop].isMonopoly){
+            PlayerArray[Player].BOTMortgage(PlayerArray, Board, Player, Prop, true);
+        }
+        Prop++;
+        if (PlayerArray[Player].Bal > Amt){
+            return false;
+        }
+        AllMortgaged = true;
+        for (int i = 0; i < 40; i++){
+            if (Board[i].OwnerID == Player && !Board[i].isMortgaged && !Board[i].isMonopoly){
+                AllMortgaged = false;
+            }
+        }
+    }
+    Prop = 0;
+    bool AllSold = false;
+    while (!AllSold) { // THEN SELL HOUSES/HOTELS'
+        if (PlayerArray[Player].Bal > Amt){
+            return false;
+        }
+        else {
+            if (Board[Prop].isMonopoly && Board[Prop].OwnerID == Player && Board[Prop].numHouse > 0) {
+                PlayerArray[Player].BOTSellHouse(PlayerArray, Board, Player, Prop, false);
+            }
+            Prop++;
+            if (Prop == 40) {
+                Prop = 1;
+            }
+            AllSold = true;
+            for (int i = 0; i < 40; i++) {
+                if (Board[i].OwnerID == Player && Board[i].numHouse > 0) {
+                    AllSold = false;
+                }
+            }
+        }
+    }
+    Prop = 0;
+    AllMortgaged = false;
+    while (!AllMortgaged){ // WHILE LOOP TO MORTGAGE FOR FUNDS CHECKING MONOPOLY TILES LAST
+        if (Board[Prop].OwnerID == Player && !Board[Prop].isMortgaged && Board[Prop].isMonopoly){
+            PlayerArray[Player].BOTMortgage(PlayerArray, Board, Player, Prop, true);
+        }
+        Prop++;
+        if (PlayerArray[Player].Bal > Amt){
+            return false;
+        }
+        AllMortgaged = true;
+        for (int i = 0; i < 40; i++){
+            if (Board[i].OwnerID == Player && !Board[i].isMortgaged && Board[i].isMonopoly){
+                AllMortgaged = false;
+            }
+        }
+    }
+    if (PlayerArray[Player].Bal < Amt){ // IF BOT STILL DOESNT HAVE ENOUGH -> GO BANKRUPT
+        cout << PlayerArray[Player].Name << " went bankrupt!\n";
+        PlayerArray[Payee].Bal += PlayerArray[Player].Bal; // TRANSFER BANKRUPT PLAYERS BALANCE TO PAYEE
+        PlayerArray[Player].Bal = 0;
+        for (int i = 0; i < 40; i++) {
+            if (Board[i].OwnerID == PlayerArray[Player].PID) { // TRANSFER BANKRUPT PLAYERS PROPERTIES
+                Board[i].OwnerID = PlayerArray[Payee].PID;
+                PlayerArray[Payee].CheckMonopoly(Board, i); // CHECK TO SEE IF PAYEE NOW HAS MONOPOLY
+            }
+        }
+        if (PlayerArray[Player].GOOJF) { // PAYEE GETS BANKRUPT PLAYERS GET OUT OF JAIL FREE CARD
+            PlayerArray[Payee].GOOJF = true;
+        }
+        PlayerArray[Player].Bankrupt = true;
+        return true;
+    }
+
+}
+
+void player::BOTSellHouse(player *PlayerArray, struct location *Board, int Player, int Prop, bool Set) {
+    if (!Board[Prop].isRailroad && !Board[Prop].isUtility) {
+        if (!Board[Prop].isMortgaged) {
+            if (!Set) {
+                PlayerArray[Player].Bal += Board[Prop].HouseP/2;
+                if (Board[Prop].Hotel) {
+                    Board[Prop].Hotel = false;
+                    cout << PlayerArray[Player].PlayerName << " sold a hotel on " << Board[Prop].Name << "\n";
+                }
+                else if (Board[Prop].numHouse > 0){
+                    Board[Prop].numHouse--;
+                    cout << PlayerArray[Player].PlayerName << " sold a house on " << Board[Prop].Name << "\n";
+                }
+            }
+            else if (Set) {
+                for (int i = Prop - 4; i < Prop + 4; i++) {
+                    if (Board[i].numHouse > 0 || Board[i].Hotel) {
+                        if (Board[i].Color == Board[Prop].Color) {
+                            PlayerArray[Player].Bal += Board[Prop].HouseP/2;
+                            if (Board[i].Hotel) {
+                                Board[i].Hotel = false;
+                                cout << PlayerArray[Player].PlayerName << " sold a hotel on " << Board[i].Name << "\n";
+                            } else {
+                                Board[i].numHouse--;
+                                cout << PlayerArray[Player].PlayerName << " sold a house on " << Board[i].Name << "\n";
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 
